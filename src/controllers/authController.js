@@ -1,31 +1,38 @@
-import { User } from "../models/user.js";
+import { User } from "../models/UserModel.js";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 
 export const registerUser = async (req, res) => {
-  const { name, email, password, role } = req.body;
   try {
+    const { name, email, password, role } = req.body;
+    console.log("Received:", email, req.body);
+    const existingUser = await User.findOne({ email });
+    console.log(existingUser);
+    if (existingUser) {
+      return res.status(400).send({
+        success: false,
+        message: "User already exists",
+      });
+    }
     const user = new User({ name, email, password: password, role });
     await user.save();
     res.status(201).json({ message: "User registered successfully" });
   } catch (err) {
     console.log(err);
-
     res.status(500).json({ error: err.message });
   }
 };
 
 export const login = async (req, res) => {
-  const { email, password, role } = req.body;
-  if (!email || !password || !role) {
+  const { email, password } = req.body;
+  if (!email || !password) {
     return res.status(400).json({ message: "All fields are required" });
   }
   try {
-    const user = await User.findOne({ email, role });
-    if (!user) return res.status(404).json({ message: "User not found" });
-    // console.log("Plain password:", password);
-    // console.log("User's hashed password from DB:", user?.password);
+    const user = await User.findOne({ email });
+    console.log("user", user);
 
+    if (!user) return res.status(404).json({ message: "User not found" });
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch)
       return res.status(400).json({ message: "Invalid credentila" });
